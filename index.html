@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>辩论大富翁 · 熔城矿脉争夺战 | 2026CDWC</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-kicker">2026CDWC · STEEL HEART</div>
+        <div class="brand-title">辩论大富翁 · 熔城矿脉争夺战</div>
+        <div class="brand-sub">《钢铁雄心：四域之争》特别企划 · 课堂演示版</div>
+      </div>
+      <nav class="nav">
+        <button class="nav-btn active" data-view="intro">① 游戏设定介绍</button>
+        <button class="nav-btn" data-view="game">② 游戏操作界面</button>
+        <button class="score-launch" id="btnOpenScore">③ 计分面板</button>
+      </nav>
+    </header>
+
+    <main class="views">
+      <!-- INTRO -->
+      <section class="view active" id="view-intro">
+        <div class="intro-grid">
+          <article class="panel">
+            <h2>剧本设定 · 欢迎来到“熔城”</h2>
+            <div class="lore">
+              <p>曾经，这里炉火昼夜不息，钢铁从高炉中诞生。后来，高炉成为能源核心，管廊成为城市神经，冷却塔成为星舰入口——这里成为全新的<strong>熔城</strong>。</p>
+              <p>来自当前时空的少年，将以<strong>调频者</strong>的身份跃迁至未来，加入四域组织。在课程中储存知识，在观赛中采集信号，在表达游戏中培养默契，争夺熔城核心资源——<strong>能量矿石</strong>。</p>
+              <p>今晚的《辩论大富翁》正是四域势力的矿脉争夺战：组内合作、组间对抗，用表达完成行动，用判断赢得机会。</p>
+            </div>
+            <div class="chip-row">
+              <span class="chip">四域势力轮流行动</span>
+              <span class="chip">货币：能量矿石</span>
+              <span class="chip">38 格熔城轨道</span>
+              <span class="chip">表达挑战 + 道具战</span>
+              <span class="chip">适配课堂大屏</span>
+            </div>
+            <div class="cta-row">
+              <button class="btn-primary" id="btnToGame">进入操作界面</button>
+              <button class="btn-ghost" id="btnOpenScore2">打开计分面板</button>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h2>规则速览</h2>
+            <div class="rule-tabs">
+              <button class="rule-tab active" data-rule="flow">流程</button>
+              <button class="rule-tab" data-rule="cells">格子事件</button>
+              <button class="rule-tab" data-rule="props">道具</button>
+              <button class="rule-tab" data-rule="score">计分</button>
+            </div>
+            <div class="rule-body" id="ruleBody"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- GAME -->
+      <section class="view" id="view-game">
+        <div class="game-layout">
+          <aside class="side-panel" id="teamList"></aside>
+
+          <div class="board-wrap">
+            <div class="board" id="board" aria-label="熔城大富翁棋盘"></div>
+          </div>
+
+          <aside class="control-stack">
+            <div class="control-card">
+              <h4>当前回合</h4>
+              <div style="font-size:20px;font-weight:900;margin-bottom:10px" id="turnLabel">—</div>
+              <div class="btn-row">
+                <button class="btn accent" id="btnRoll">投掷骰子（空格）</button>
+                <button class="btn" id="btnNext">结束/下一家</button>
+              </div>
+            </div>
+
+            <div class="control-card">
+              <h4>道具操作</h4>
+              <select class="select" id="propSelect"></select>
+              <label style="font-size:12px;color:#9bb8d4">路障目标格</label>
+              <select class="select" id="barrierSelect"></select>
+              <label style="font-size:12px;color:#9bb8d4">冻结目标队伍</label>
+              <select class="select" id="targetSelect"></select>
+              <div class="btn-row">
+                <button class="btn warn" id="btnUseProp">使用道具</button>
+              </div>
+            </div>
+
+            <div class="control-card">
+              <h4>行动日志</h4>
+              <div class="log-box" id="logBox"></div>
+              <div class="btn-row" style="margin-top:10px">
+                <button class="btn" id="btnReset">重置本局</button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Score Modal -->
+  <div class="modal-backdrop" id="scoreModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="scoreTitle">
+      <header>
+        <div>
+          <h3 id="scoreTitle">能量矿石 · 计分面板</h3>
+          <p>课堂演示快捷加减分 · 快捷键 S 打开 / Esc 关闭</p>
+        </div>
+        <button class="icon-btn" id="closeScore" aria-label="关闭">×</button>
+      </header>
+      <div class="score-grid" id="scoreGrid"></div>
+      <div class="quick-award">
+        <h4>快捷奖励（指定队伍）</h4>
+        <select class="select" id="awardTeam" style="max-width:240px">
+          <option value="0">A · 炉心域</option>
+          <option value="1">B · 轨域</option>
+          <option value="2">C · 穹域</option>
+          <option value="3">D · 钢潮域</option>
+        </select>
+        <div class="award-grid" id="awardGrid">
+          <button class="btn ore" data-award="5" data-reason="一轮挑战">+5 一轮挑战</button>
+          <button class="btn ore" data-award="10" data-reason="你演我猜">+10 你演我猜</button>
+          <button class="btn ore" data-award="5" data-reason="金曲3句">+5 金曲3句</button>
+          <button class="btn ore" data-award="10" data-reason="金曲6句">+10 金曲6句</button>
+          <button class="btn ore" data-award="10" data-reason="暴矿脉冲">+10 暴矿脉冲</button>
+          <button class="btn" data-award="-5" data-reason="秩序扣减">-5 秩序扣减</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Modal -->
+  <div class="modal-backdrop" id="eventModal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <header>
+        <div>
+          <div class="badge" id="eventBadge">事件</div>
+          <h3 id="eventTitle">事件</h3>
+        </div>
+        <button class="icon-btn" id="closeEvent" aria-label="关闭">×</button>
+      </header>
+      <div id="eventBody"></div>
+      <div class="event-actions" id="eventActions"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
