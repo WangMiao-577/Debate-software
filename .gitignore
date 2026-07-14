@@ -1,0 +1,23 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python / extraction temps
+__pycache__/
+*.pyc
+.venv/
+_tmp_media/
+rules_doc.txt
+rules_clean.txt
+rules_tokens.json
+extract_docx_clean.py
+
+# Local leftovers
+*.log
+.env
+.env.*

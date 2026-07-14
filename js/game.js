@@ -39,6 +39,100 @@
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
+  /** 各素材池独立洗牌；用尽后重新洗牌，保证一轮内不重复 */
+  const decks = Object.create(null);
+  function shuffleInPlace(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+  function drawFromPool(poolKey) {
+    const source = DATA[poolKey];
+    if (!source || !source.length) return null;
+    if (!decks[poolKey] || decks[poolKey].length === 0) {
+      decks[poolKey] = shuffleInPlace(source.map((_, i) => i));
+    }
+    const idx = decks[poolKey].pop();
+    return { item: source[idx], remain: decks[poolKey].length, total: source.length };
+  }
+
+  const timerState = { remain: 0, total: 0, running: false, handle: null, onDone: null };
+  function formatTime(sec) {
+    const s = Math.max(0, Math.ceil(sec));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+  }
+  function stopTimer() {
+    timerState.running = false;
+    if (timerState.handle) {
+      clearInterval(timerState.handle);
+      timerState.handle = null;
+    }
+  }
+  function paintTimer() {
+    const display = $('#actTimerDisplay');
+    const bar = $('#actTimerBar');
+    if (display) {
+      display.textContent = formatTime(timerState.remain);
+      display.classList.toggle('urgent', timerState.remain <= 5 && timerState.remain > 0);
+      display.classList.toggle('done', timerState.remain <= 0);
+    }
+    if (bar && timerState.total > 0) {
+      bar.style.width = `${Math.max(0, (timerState.remain / timerState.total) * 100)}%`;
+    }
+  }
+  function startTimer(seconds, { autoStart = false } = {}) {
+    stopTimer();
+    timerState.total = seconds;
+    timerState.remain = seconds;
+    timerState.onDone = null;
+    paintTimer();
+    const bind = () => {
+      $('#btnTimerStart')?.addEventListener('click', () => {
+        if (timerState.running) return;
+        if (timerState.remain <= 0) timerState.remain = timerState.total;
+        timerState.running = true;
+        timerState.handle = setInterval(() => {
+          timerState.remain -= 0.1;
+          if (timerState.remain <= 0) {
+            timerState.remain = 0;
+            paintTimer();
+            stopTimer();
+            toast('时间到！');
+          } else {
+            paintTimer();
+          }
+        }, 100);
+      });
+      $('#btnTimerPause')?.addEventListener('click', () => stopTimer());
+      $('#btnTimerReset')?.addEventListener('click', () => {
+        stopTimer();
+        timerState.remain = timerState.total;
+        paintTimer();
+      });
+    };
+    // buttons exist after HTML inject — call after openEvent paints
+    requestAnimationFrame(bind);
+    if (autoStart) requestAnimationFrame(() => $('#btnTimerStart')?.click());
+  }
+  function timerHtml(seconds, label = '限时') {
+    return `<div class="act-timer" id="actTimer">
+      <div class="act-timer-head">
+        <span class="act-timer-label">${label}</span>
+        <span class="act-timer-display" id="actTimerDisplay">${formatTime(seconds)}</span>
+      </div>
+      <div class="act-timer-track"><div class="act-timer-bar" id="actTimerBar" style="width:100%"></div></div>
+      <div class="act-timer-btns">
+        <button type="button" class="btn accent" id="btnTimerStart">开始计时</button>
+        <button type="button" class="btn" id="btnTimerPause">暂停</button>
+        <button type="button" class="btn" id="btnTimerReset">重置</button>
+      </div>
+    </div>`;
+  }
+
   function save() {
     try {
       localStorage.setItem('melt-city-monopoly', JSON.stringify({
@@ -74,6 +168,7 @@
     $(`#${id}`).classList.add('show');
   }
   function closeModal(id) {
+    if (id === 'eventModal') stopTimer();
     $(`#${id}`).classList.remove('show');
   }
 
@@ -86,7 +181,7 @@
         .join('') || '<span class="prop-pill">暂无道具</span>';
       return `<div class="team-card ${i === state.turn ? 'active' : ''}" style="color:${t.color}" data-team="${i}">
         <div class="name"><span>${t.id} · ${t.name}</span><span>${i === state.turn ? '行动中' : ''}</span></div>
-        <div class="ore">${t.ore}<span style="font-size:12px;margin-left:6px;color:#9bb8d4">矿石</span></div>
+        <div class="ore">${t.ore}<span style="font-size:12px;margin-left:6px;color:#9bb8d4">/ ${DATA.scoreCap || 50}</span></div>
         <div class="meta">位置：${DATA.cells[t.pos].name}（#${t.pos}）${t.skip ? ' · 冻结中' : ''}</div>
         <div class="props">${props}</div>
       </div>`;
@@ -98,14 +193,13 @@
         <div class="head"><span style="color:${t.color}">${t.id} · ${t.name}</span>
           <input class="input" style="width:120px;margin:0" value="${t.name}" data-rename="${i}" />
         </div>
-        <div class="value" id="score-val-${i}">${t.ore}</div>
+        <div class="value" id="score-val-${i}">${t.ore}<span style="font-size:14px;color:#9bb8d4"> / ${DATA.scoreCap || 50}</span></div>
         <div class="score-actions">
-          <button class="btn" data-score="${i}" data-delta="-10">-10</button>
-          <button class="btn" data-score="${i}" data-delta="-5">-5</button>
+          <button class="btn" data-score="${i}" data-delta="-2">-2</button>
           <button class="btn" data-score="${i}" data-delta="-1">-1</button>
           <button class="btn ore" data-score="${i}" data-delta="1">+1</button>
-          <button class="btn ore" data-score="${i}" data-delta="5">+5</button>
-          <button class="btn ore" data-score="${i}" data-delta="10">+10</button>
+          <button class="btn ore" data-score="${i}" data-delta="2">+2</button>
+          <button class="btn ore" data-score="${i}" data-delta="3">+3</button>
         </div>
       </div>`).join('');
 
@@ -193,10 +287,14 @@
 
   function addOre(teamIndex, delta, reason) {
     const t = DATA.teams[teamIndex];
-    t.ore = Math.max(0, t.ore + delta);
-    const sign = delta >= 0 ? '+' : '';
-    log(`${t.name} ${sign}${delta} 能量矿石${reason ? '（' + reason + '）' : ''} → ${t.ore}`);
-    toast(`${t.name} ${sign}${delta} 矿石`);
+    const cap = DATA.scoreCap || 50;
+    const before = t.ore;
+    t.ore = Math.max(0, Math.min(cap, t.ore + delta));
+    const applied = t.ore - before;
+    const sign = applied >= 0 ? '+' : '';
+    log(`${t.name} ${sign}${applied} 能量矿石${reason ? '（' + reason + '）' : ''} → ${t.ore}/${cap}`);
+    if (delta > 0 && applied < delta) toast(`${t.name} 已达上限 ${cap}`);
+    else toast(`${t.name} ${sign}${applied} 矿石`);
     renderAll();
   }
 
@@ -306,23 +404,113 @@
     openModal('eventModal');
   }
 
-  function awardButtons(defaultAmt = 5) {
-    return [3, 5, 8, 10].map(n => ({
-      label: `+${n} 矿石`,
+  function awardButtons(presets, activityKey) {
+    const list = (presets || [
+      { n: 1, label: '+1' },
+      { n: 2, label: '+2' },
+      { n: 5, label: '+5' }
+    ]).map(p => ({
+      label: typeof p === 'number' ? `+${p} 矿石` : `${p.label} 矿石`,
       className: 'btn ore',
       onClick: () => {
+        const n = typeof p === 'number' ? p : p.n;
         addOre(state.turn, n, '挑战奖励');
         closeModal('eventModal');
         nextTurn();
       }
-    })).concat([
-      { label: `默认 +${defaultAmt}`, className: 'btn accent', onClick: () => {
-        addOre(state.turn, defaultAmt, '挑战奖励');
-        closeModal('eventModal');
-        nextTurn();
-      }},
+    }));
+    const demoUrl = activityKey ? `zones.html?a=${encodeURIComponent(activityKey)}` : 'zones.html';
+    list.push(
+      { label: '打开活动演示页', className: 'btn', onClick: () => { window.open(demoUrl, '_blank'); } },
       { label: '跳过 / 未完成', className: 'btn', onClick: () => { closeModal('eventModal'); nextTurn(); } }
-    ]);
+    );
+    return list;
+  }
+
+  function buildActivityContent(type) {
+    const act = DATA.activities[type];
+    if (!act) return { html: '', awards: [1, 2], timerSec: 0 };
+
+    const drawn = act.poolKey ? drawFromPool(act.poolKey) : null;
+    const remainHint = drawn
+      ? `<p class="deck-hint">素材池剩余 ${drawn.remain} / ${drawn.total}（打乱不重复，用尽后自动重洗）</p>`
+      : '';
+
+    let material = '';
+    let awards = [{ n: 1, label: '+1' }, { n: 2, label: '+2' }];
+
+    if (type === 'garden') {
+      material = `<div class="act-material">
+        <div class="act-material-label">本轮园目</div>
+        <div class="act-material-hero">${drawn.item}</div>
+        <p class="act-material-tip">0.5 分钟内接龙说出该园概念的外延，每说一个 +1。</p>
+      </div>`;
+      awards = [{ n: 1, label: '+1 一个外延' }, { n: 2, label: '+2' }, { n: 3, label: '+3' }, { n: 5, label: '+5' }];
+    } else if (type === 'feihua' || type === 'poetry') {
+      material = `<div class="act-material">
+        <div class="act-material-label">主题</div>
+        <div class="act-material-hero">${drawn.item}</div>
+        <p class="act-material-tip">${type === 'feihua' ? '飞花令：接龙含该字/符合主题的成语或词语。' : '诗词大赛：限时内背诵或接龙相关诗句。'}</p>
+      </div>`;
+    } else if (type === 'refute') {
+      material = `<div class="act-material">
+        <div class="act-material-label">待反驳观点</div>
+        <div class="act-material-claim">${drawn.item}</div>
+        <p class="act-material-tip">1 分钟内组织两层反驳；按完成度线性给分 +1～+8（步长 1）。</p>
+      </div>`;
+      awards = [1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ n, label: `+${n}` }));
+    } else if (type === 'aiDetect') {
+      const sample = drawn.item;
+      material = `<div class="act-material">
+        <div class="act-material-label">${sample.label} · 请鉴别人工 / AI</div>
+        <div class="act-material-claim">${sample.text}</div>
+        <details class="act-answer">
+          <summary>显示答案（导师用）</summary>
+          <p>标准答案：<strong>${sample.answerLabel}</strong></p>
+        </details>
+        <p class="act-material-tip">小组 1 分钟内鉴别；成功 +5。</p>
+      </div>`;
+      awards = [{ n: 5, label: '+5 成功' }];
+    } else if (type === 'bluff') {
+      const pack = drawn.item;
+      const cards = shuffleInPlace(pack.concepts.map(c => ({ ...c })));
+      material = `<div class="act-material">
+        <div class="act-material-label">本轮概念包（发给组员 · 仅导师可看解释）</div>
+        <div class="bluff-grid">${cards.map((c, i) => `
+          <div class="bluff-card">
+            <div class="bluff-idx">纸条 ${i + 1}</div>
+            <div class="bluff-term">${c.term}</div>
+            <details class="act-answer">
+              <summary>导师查看</summary>
+              <p>${c.real ? `✅ 有解释：${c.explanation}` : '❌ 无真实解释（瞎掰）'}</p>
+            </details>
+          </div>`).join('')}</div>
+        <p class="act-material-tip">先用下方「准备 1 分钟」计时；解释环节每人 30 秒，可用重置后改口播计时。</p>
+      </div>`;
+      awards = [
+        { n: 7, label: '+7 未找出' },
+        { n: 2, label: '+2 他组（换队）' }
+      ];
+    }
+
+    const timerBlock = act.timerSec
+      ? timerHtml(act.timerSec, type === 'bluff' ? '准备 1 分钟' : `限时 ${act.timerSec >= 60 ? act.timerSec / 60 + ' 分钟' : act.timerSec + ' 秒'}`)
+      : '';
+
+    const html = `
+      <div class="act-panel">
+        <div class="act-rule">
+          <h4>规则介绍</h4>
+          <p>${act.desc}</p>
+          <p class="act-score-hint">计分：${act.scoreHint} · 单队上限 ${DATA.scoreCap || 50}</p>
+        </div>
+        ${material}
+        ${remainHint}
+        ${timerBlock}
+        <p class="hint" style="margin-top:10px;color:#9bb8d4">大屏演示页：zones.html（快捷键 Z）。素材已打乱，点「下一素材」可在演示页继续抽取。</p>
+      </div>`;
+
+    return { html, awards, timerSec: act.timerSec || 0 };
   }
 
   async function handleCell(cellId) {
@@ -401,23 +589,14 @@
     // activity cells
     const act = DATA.activities[c.type];
     if (act) {
-      let extra = '';
-      if (c.type === 'garden') extra = `<p style="margin-top:10px">推荐区目：<strong>${pick(DATA.gardens)}</strong></p>`;
-      if (c.type === 'feihua') extra = `<p style="margin-top:10px">推荐关键字：<strong>${pick(DATA.feihua)}</strong></p>`;
-      if (c.type === 'poetry' || c.type === 'song') extra = `<p style="margin-top:10px">推荐意象：<strong>${pick(DATA.poetry)}</strong></p>`;
-      if (c.type === 'charades') extra = `<p style="margin-top:10px">推荐角色：<strong>${pick(DATA.charades)}</strong></p>`;
-      if (c.type === 'telephone') extra = `<p style="margin-top:10px">推荐密语：<strong>${pick(DATA.telephone)}</strong></p>`;
-      if (c.type === 'story') {
-        extra = `<p style="margin-top:10px">词语：名词 <strong>${pick(DATA.storyWords.noun)}</strong> /
-          动词 <strong>${pick(DATA.storyWords.verb)}</strong> /
-          形容词 <strong>${pick(DATA.storyWords.adj)}</strong></p>`;
-      }
+      const built = buildActivityContent(c.type);
       openEvent({
         title: act.title,
         badge: '表达挑战',
-        html: `<div class="event-desc">${act.desc}${extra}<p class="hint" style="margin-top:10px;color:#9bb8d4">课堂演示：完成挑战后由导师点击发放矿石。</p></div>`,
-        actions: awardButtons(c.type === 'charades' ? 10 : 5)
+        html: built.html,
+        actions: awardButtons(built.awards, c.type)
       });
+      if (built.timerSec) startTimer(built.timerSec);
       return;
     }
 
@@ -434,7 +613,7 @@
     setTimeout(() => {
       const t = team();
       if (item.key === 'burst') {
-        addOre(state.turn, 10, '暴矿脉冲');
+        addOre(state.turn, 3, '暴矿脉冲');
       } else {
         t.props[item.key] = (t.props[item.key] || 0) + 1;
         log(`${t.name} 转盘获得 ${item.label}`);
@@ -535,7 +714,7 @@
       </ul>
       <p class="hint">本局货币：能量矿石（对应上届“仙桃”）。</p>`,
       cells: `<ul>
-        <li><strong>表达挑战格</strong>：钢索扭扭、频段数七、逛三区、飞花令、诗词共振、金曲接龙、你演我猜、信号中继、叙事接龙、轨道投篮。</li>
+        <li><strong>表达挑战格（新规则）</strong>：逛三园（小活动·30秒接龙）、飞花令、诗词大赛、驳论闪电战、AI鉴识、瞎掰王。</li>
         <li><strong>能量转盘</strong>：随机发放路障/冻结/量子骰子/再动/跃迁舱/暴矿脉冲。</li>
         <li><strong>跃迁门</strong>：传送至其他跃迁门。</li>
         <li><strong>再投一次</strong>：立即额外投掷。</li>
@@ -547,13 +726,15 @@
         <li><strong>量子骰子</strong>：指定 1~6 点前进。初始 1。</li>
         <li><strong>再动推进</strong>：再投一次骰子。</li>
         <li><strong>跃迁舱</strong>：直接前往跃迁门（原“筋斗云”设定）。</li>
-        <li><strong>暴矿脉冲</strong>：立即 +10 能量矿石。</li>
+        <li><strong>暴矿脉冲</strong>：立即 +3 能量矿石。</li>
       </ul>`,
       score: `<ul>
-        <li>多数挑战：按完成质量给 <strong>5~10</strong> 矿石（向下取整规则由导师掌握）。</li>
-        <li>你演我猜：猜对 <strong>+10</strong>。</li>
-        <li>金曲接龙：3 句 +5，6 句 +10。</li>
-        <li>点击顶部「计分面板」可随时加减分、改队名。</li>
+        <li>逛三园：有效外延 <strong>+1</strong> / 个（30 秒）。</li>
+        <li>飞花令 / 诗词大赛：建议 <strong>+1</strong>，优秀 <strong>+2</strong>。</li>
+        <li>驳论闪电战：按完成度线性给分 <strong>+1～+8</strong>（步长 1）。</li>
+        <li>AI鉴识：鉴别成功 <strong>+5</strong>。</li>
+        <li>瞎掰王：未找出有解释者该组 <strong>+7</strong>；找出则其余三组各 <strong>+2</strong>。</li>
+        <li>暴矿脉冲 +3。单队上限 <strong>50</strong>。活动素材打乱不重复展示。</li>
       </ul>
       <p class="hint">建议课堂投屏后，由助教专职操作计分弹窗。</p>`
     };
@@ -607,8 +788,21 @@
     });
 
     // keyboard for classroom
+    let brandClicks = 0;
+    let brandTimer = null;
+    document.querySelector('.brand-kicker')?.addEventListener('click', () => {
+      brandClicks += 1;
+      if (brandClicks >= 5) {
+        brandClicks = 0;
+        window.open('zones.html', '_blank');
+      }
+      clearTimeout(brandTimer);
+      brandTimer = setTimeout(() => { brandClicks = 0; }, 1500);
+    });
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 's' || e.key === 'S') { renderTeams(); openModal('scoreModal'); }
+      if (e.key === 'z' || e.key === 'Z') { window.open('zones.html', '_blank'); }
       if (e.key === 'Escape') { closeModal('scoreModal'); closeModal('eventModal'); }
       if (e.key === ' ' && state.view === 'game' && !state.rolling) {
         e.preventDefault();

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>熔城活动演示 · 隐藏页</title>
+  <link rel="stylesheet" href="css/zones.css" />
+</head>
+<body>
+  <div class="zones-app">
+    <header class="z-top">
+      <div>
+        <div class="z-brand-kicker">HIDDEN CHANNEL · ACTIVITY STAGE</div>
+        <div class="z-brand-title">熔城活动演示</div>
+        <div class="z-brand-sub">新规则五大活动 · 逛三园为小活动 · 素材打乱不重复 · 限时计时器</div>
+      </div>
+      <div class="z-nav">
+        <button class="z-btn" id="btnToHub">活动总览</button>
+        <button class="z-btn accent" id="btnBackMain">返回主游戏</button>
+      </div>
+    </header>
+
+    <main class="z-main">
+      <section class="z-panel active" id="panel-hub">
+        <div class="hub-head">
+          <h2>选择活动</h2>
+          <p>踩到对应格子后可在此大屏演示。注意：<strong>逛三园是小活动</strong>（抽园目 + 30 秒接龙），不是多活动分区。</p>
+        </div>
+        <div class="zone-grid" id="zoneGrid"></div>
+        <p class="hidden-hint">入口：主页面快捷键 Z，或连点 “2026CDWC · STEEL HEART” 五次；也可直接打开 zones.html</p>
+      </section>
+
+      <section class="z-panel" id="panel-present">
+        <div class="present-stage" id="presentStage"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/zones-data.js"></script>
+  <script src="js/zones.js"></script>
+</body>
+</html>

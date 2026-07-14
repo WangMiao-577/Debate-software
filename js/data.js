@@ -17,114 +17,179 @@ window.MELT_CITY = {
     jump: '跃迁舱',
     burst: '暴矿脉冲'
   },
+  scoreCap: 50,
   wheelItems: [
     { key: 'barrier', label: '路障磁环' },
     { key: 'stun', label: '冻结力场' },
     { key: 'remoteDice', label: '量子骰子' },
     { key: 'extraMove', label: '再动推进' },
     { key: 'jump', label: '跃迁舱' },
-    { key: 'burst', label: '暴矿脉冲 +10' }
+    { key: 'burst', label: '暴矿脉冲 +3' }
   ],
+  /** 素材池：各活动独立洗牌，用尽后再洗，保证不重复展示 */
   gardens: [
-    '本届参赛队伍区', '知名辩手区', '单机游戏区', '熔城地标区', '省会城市区',
-    '国家首都区', '中外知名歌手区', '哲学家园', '数理定律区', '知名建筑区'
+    '本届参赛队伍园', '知名辩手园', '单机游戏园', '画家园', '省会城市园',
+    '国家首都园', '音乐家园', '哲学家园', '数学物理定律园', '知名建筑园'
   ],
-  feihua: ['龙','鸟','月','风','水','雪','酒','花','红','春','喜悦','忧愁','颜色','植物','四季','生肖','叠字','建筑','兵器','写人'],
-  poetry: ['月','心','国','和','家','花','一','手','梦','光'],
-  songs: ['月','心','国','和','家','花','一','手','梦','光'],
-  charades: ['炉心守护者','轨道骑士','穹顶观测员','钢潮先锋','调频者','熔城旅人','能量矿工','天穹辩手'],
-  telephone: ['比赛获胜了','吃一顿火锅','努力备赛中','下楼扔垃圾','捡到一百万','慢跑五公里'],
-  storyWords: {
-    noun: ['苹果','水杯','电脑','金钱','手表','鞋子','书包','钢笔','书本','陀螺'],
-    verb: ['殴打','嘲笑','抓住','痛哭','起飞','瘫软','疑惑','大笑','旋转','坠落'],
-    adj: ['欢乐','忧愁','激动','平静','快速','柔弱','坚强','夸张','丑陋','优美']
-  },
+  feihuaThemes: [
+    '龙', '鸟', '月', '风', '水', '雪', '酒', '花', '红', '春',
+    '颜色', '植物', '生肖', '叠字', '建筑', '兵器', '写人'
+  ],
+  refuteClaims: [
+    '李明隆是辩论教练，因此能生很多娃。',
+    '李明隆长得很帅，因此是辩论教练。'
+  ],
+  aiSamples: [
+    {
+      id: 's1-human',
+      label: '素材一 · 文本 A',
+      text: '在南三环木犀园到南四环大红门一带，有很多服装批发大楼，其中的天雅是专门的品牌批发，购物环境不错。',
+      answer: 'human',
+      answerLabel: '人工'
+    },
+    {
+      id: 's1-ai',
+      label: '素材一 · 文本 B',
+      text: '这些市场都提供各种服装产品，包括男装、女装、童装等。',
+      answer: 'ai',
+      answerLabel: 'AI'
+    },
+    {
+      id: 's2-human',
+      label: '素材二 · 文本 A',
+      text: '华尔街的话，其实价格蛮贵的，网上的叫骂声也蛮高的，但是我觉得培训方面还是非常不错的。',
+      answer: 'human',
+      answerLabel: '人工'
+    },
+    {
+      id: 's2-ai',
+      label: '素材二 · 文本 B',
+      text: '华尔街英语使用了多种教学方法，包括讲课、角色扮演、小组讨论和个人辅导等。',
+      answer: 'ai',
+      answerLabel: 'AI'
+    }
+  ],
+  /** 瞎掰王：每包 4 个概念，仅 1 个带真实解释；演示用示例库 */
+  bluffPacks: [
+    {
+      id: 'pack1',
+      concepts: [
+        { term: '奥卡姆剃刀', real: true, explanation: '一种方法论原则：如无必要，勿增实体；在同等解释力下优先更简单的假设。' },
+        { term: '虚空回响', real: false },
+        { term: '镜面熵流', real: false },
+        { term: '静默契约', real: false }
+      ]
+    },
+    {
+      id: 'pack2',
+      concepts: [
+        { term: '贝叶斯更新', real: true, explanation: '根据新证据调整先验概率，得到后验概率的推理方式。' },
+        { term: '时滞回环', real: false },
+        { term: '灰阶悖论', real: false },
+        { term: '空集共振', real: false }
+      ]
+    },
+    {
+      id: 'pack3',
+      concepts: [
+        { term: '沉没成本', real: true, explanation: '已经发生且无法收回的成本；理性决策时应忽略它，只看未来增量得失。' },
+        { term: '逆熵捕手', real: false },
+        { term: '名义锚点', real: false },
+        { term: '伪相关核', real: false }
+      ]
+    }
+  ],
   activities: {
-    twist: {
-      title: '钢索扭扭',
-      desc: '导师选定“钢索”数量，全组同学依次扭。每完成一轮获得 5 枚能量矿石（向下取整），建议奖励区间 5~10。'
-    },
-    count7: {
-      title: '频段数七',
-      desc: '导师选定起始数字，全组同学依次数七。每完成一轮获得 5 枚能量矿石（向下取整），建议奖励区间 5~10。'
-    },
     garden: {
-      title: '逛三区',
-      desc: '导师选定一个“区”，全组同学依次接龙逛区。每完成一轮获得 5 枚能量矿石（向下取整），建议奖励区间 5~10。'
+      title: '逛三园',
+      short: '接龙外延',
+      desc: '抽到一个「XX园」后，组内成员在 0.5 分钟（30 秒）内接龙说出该概念的多个外延。例如哲学家园可说「亚里士多德」。每说出一个有效外延 +1 分。',
+      scoreHint: '有效外延 +1 / 个',
+      timerSec: 30,
+      poolKey: 'gardens'
     },
     feihua: {
       title: '飞花令',
-      desc: '导师选定关键字，1 分钟内进行成语飞花令。说出几个成语，给予对应数量矿石（向下取整），建议 5~10。'
+      short: '成语飞花',
+      desc: '导师公布主题字/意象，组内进行飞花令：接龙说出包含该字（或符合该主题）的成语/词语。课堂常见玩法，限时 1 分钟。按完成质量给分。',
+      scoreHint: '建议 +1 / 优秀 +2',
+      timerSec: 60,
+      poolKey: 'feihuaThemes'
     },
     poetry: {
-      title: '诗词共振',
-      desc: '导师选定意象/关键字，2 分钟内背诵相关古诗。按句数给予矿石（向下取整），建议 5~10。'
+      title: '诗词大赛',
+      short: '诗词接龙',
+      desc: '与飞花令共用主题库。导师公布主题后，组内在限时内背诵/接龙相关古诗词句。按句数与质量给分。',
+      scoreHint: '建议 +1 / 优秀 +2',
+      timerSec: 120,
+      poolKey: 'feihuaThemes'
     },
-    song: {
-      title: '金曲接龙',
-      desc: '导师选定意象/关键字，2 分钟内唱出相关歌词。3 句 = 5 矿石，6 句 = 10 矿石。'
+    refute: {
+      title: '驳论闪电战',
+      short: '两层反驳',
+      desc: '针对屏幕上的观点，在 1 分钟内组织两层反驳，由助教老师评判完成度。按完成质量连续线性给分，步长 1 分，区间 1～8 分。',
+      scoreHint: '线性给分 +1～+8',
+      timerSec: 60,
+      poolKey: 'refuteClaims'
     },
-    charades: {
-      title: '你演我猜',
-      desc: '三位同学演绎熔城/观赛营相关角色，另外三位猜测。猜对得 10 矿石，时限 30 秒。'
+    aiDetect: {
+      title: 'AI鉴识',
+      short: '人机鉴别',
+      desc: '运用学过的知识，小组在 1 分钟内鉴别屏幕上的文字是 AI 写的还是人写的。鉴别成功 +5 分。',
+      scoreHint: '鉴别成功 +5',
+      timerSec: 60,
+      poolKey: 'aiSamples'
     },
-    telephone: {
-      title: '信号中继',
-      desc: '传递指定文字：第一人听，后 5 人依次比划，最后一人复述。按还原合理程度给 5~10 矿石。'
-    },
-    story: {
-      title: '叙事接龙',
-      desc: '三位同学各拿一个词（名/动/形），第一人开句，后续同学合理接龙补全故事，给 5~10 矿石。'
-    },
-    basketball: {
-      title: '轨道投篮',
-      desc: '课堂互动小游戏：后仰跳投/投篮挑战。由导师现场裁定成功次数，建议奖励 5~10 矿石。'
+    bluff: {
+      title: '瞎掰王',
+      short: '真假概念',
+      desc: '组内每人拿到一张纸条，上面是一个晦涩概念；其中只有一张带真实解释。1 分钟准备后，每人依次解释 30 秒；其余三组投票找出「有解释的人」。未找出：该组 +7；找出：其余三组各 +2。',
+      scoreHint: '未找出该组 +7 · 找出他组各 +2',
+      timerSec: 60,
+      speakSec: 30,
+      poolKey: 'bluffPacks'
     }
   },
   // Classic Monopoly perimeter on 11x11 grid: bottom-left start, clockwise
-  // grid positions [col,row] 1-indexed for CSS grid
   cells: [
     { id: 0, name: '炉心起点', type: 'start', col: 1, row: 11 },
-    { id: 1, name: '诗词共振', type: 'poetry', col: 1, row: 10 },
-    { id: 2, name: '轨道投篮', type: 'basketball', col: 1, row: 9 },
-    { id: 3, name: '频段数七', type: 'count7', col: 1, row: 8 },
-    { id: 4, name: '信号中继', type: 'telephone', col: 1, row: 7 },
+    { id: 1, name: 'AI鉴识', type: 'aiDetect', col: 1, row: 10 },
+    { id: 2, name: '驳论闪电战', type: 'refute', col: 1, row: 9 },
+    { id: 3, name: '瞎掰王', type: 'bluff', col: 1, row: 8 },
+    { id: 4, name: '飞花令', type: 'feihua', col: 1, row: 7 },
     { id: 5, name: '能量转盘', type: 'wheel', col: 1, row: 6 },
     { id: 6, name: '路障磁环', type: 'item', item: 'barrier', col: 1, row: 5 },
-    { id: 7, name: '逛三区', type: 'garden', col: 1, row: 4 },
-    { id: 8, name: '叙事接龙', type: 'story', col: 1, row: 3 },
+    { id: 7, name: '逛三园', type: 'garden', col: 1, row: 4 },
+    { id: 8, name: '驳论闪电战', type: 'refute', col: 1, row: 3 },
     { id: 9, name: '跃迁门', type: 'portal', col: 1, row: 2 },
-    { id: 10, name: '你演我猜', type: 'charades', col: 2, row: 1 },
-    { id: 11, name: '逛三区', type: 'garden', col: 3, row: 1 },
+    { id: 10, name: 'AI鉴识', type: 'aiDetect', col: 2, row: 1 },
+    { id: 11, name: '瞎掰王', type: 'bluff', col: 3, row: 1 },
     { id: 12, name: '能量转盘', type: 'wheel', col: 4, row: 1 },
-    { id: 13, name: '钢索扭扭', type: 'twist', col: 5, row: 1 },
+    { id: 13, name: '驳论闪电战', type: 'refute', col: 5, row: 1 },
     { id: 14, name: '再投一次', type: 'reroll', col: 6, row: 1 },
-    { id: 15, name: '金曲接龙', type: 'song', col: 7, row: 1 },
+    { id: 15, name: '诗词大赛', type: 'poetry', col: 7, row: 1 },
     { id: 16, name: '再动推进', type: 'item', item: 'extraMove', col: 8, row: 1 },
-    { id: 17, name: '逛三区', type: 'garden', col: 9, row: 1 },
-    { id: 18, name: '飞花令', type: 'feihua', col: 10, row: 1 },
+    { id: 17, name: 'AI鉴识', type: 'aiDetect', col: 9, row: 1 },
+    { id: 18, name: '瞎掰王', type: 'bluff', col: 10, row: 1 },
     { id: 19, name: '跃迁门', type: 'portal', col: 11, row: 1 },
-    { id: 20, name: '逛三区', type: 'garden', col: 11, row: 2 },
-    { id: 21, name: '信号中继', type: 'telephone', col: 11, row: 3 },
+    { id: 20, name: '驳论闪电战', type: 'refute', col: 11, row: 2 },
+    { id: 21, name: '逛三园', type: 'garden', col: 11, row: 3 },
     { id: 22, name: '冻结力场', type: 'item', item: 'stun', col: 11, row: 4 },
     { id: 23, name: '能量转盘', type: 'wheel', col: 11, row: 5 },
-    { id: 24, name: '诗词共振', type: 'poetry', col: 11, row: 6 },
-    { id: 25, name: '频段数七', type: 'count7', col: 11, row: 7 },
-    { id: 26, name: '轨道投篮', type: 'basketball', col: 11, row: 8 },
-    { id: 27, name: '叙事接龙', type: 'story', col: 11, row: 9 },
+    { id: 24, name: 'AI鉴识', type: 'aiDetect', col: 11, row: 6 },
+    { id: 25, name: '瞎掰王', type: 'bluff', col: 11, row: 7 },
+    { id: 26, name: '驳论闪电战', type: 'refute', col: 11, row: 8 },
+    { id: 27, name: '飞花令', type: 'feihua', col: 11, row: 9 },
     { id: 28, name: '跃迁门', type: 'portal', col: 11, row: 10 },
-    { id: 29, name: '金曲接龙', type: 'song', col: 11, row: 11 },
+    { id: 29, name: '瞎掰王', type: 'bluff', col: 11, row: 11 },
     { id: 30, name: '能量转盘', type: 'wheel', col: 10, row: 11 },
     { id: 31, name: '量子骰子', type: 'item', item: 'remoteDice', col: 9, row: 11 },
-    { id: 32, name: '你演我猜', type: 'charades', col: 8, row: 11 },
-    { id: 33, name: '逛三区', type: 'garden', col: 7, row: 11 },
-    { id: 34, name: '逛三区', type: 'garden', col: 6, row: 11 },
-    { id: 35, name: '钢索扭扭', type: 'twist', col: 5, row: 11 },
-    { id: 36, name: '飞花令', type: 'feihua', col: 4, row: 11 },
-    { id: 37, name: '再投一次', type: 'reroll', col: 3, row: 11 },
-    // fill remaining bottom cells visually - wait, classic board has cells 37 next to start
-    // Looking at excel: bottom is 0, 37,36,35,34,33,32,31,30,29,28
-    // So after 37 should be col 2 row 11... I need cell between 37 and 0
+    { id: 32, name: '驳论闪电战', type: 'refute', col: 8, row: 11 },
+    { id: 33, name: 'AI鉴识', type: 'aiDetect', col: 7, row: 11 },
+    { id: 34, name: '逛三园', type: 'garden', col: 6, row: 11 },
+    { id: 35, name: '瞎掰王', type: 'bluff', col: 5, row: 11 },
+    { id: 36, name: '诗词大赛', type: 'poetry', col: 4, row: 11 },
+    { id: 37, name: '再投一次', type: 'reroll', col: 3, row: 11 }
   ]
 };
 
