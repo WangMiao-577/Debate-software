@@ -252,6 +252,56 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .team-card .meta { margin-top: 4px; font-size: 12px; color: var(--text-muted); }
 .team-card .props { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+.prop-roster {
+  margin-bottom: 10px;
+}
+.prop-roster-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.prop-roster-team { font-weight: 900; font-size: 15px; }
+.prop-roster-note { color: var(--text-muted); }
+.prop-roster-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.prop-roster-item {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-size: 12px;
+}
+.prop-roster-item.ready {
+  border-color: rgba(125, 255, 179, 0.55);
+  background: rgba(125, 255, 179, 0.1);
+}
+.prop-roster-item.blocked {
+  border-color: rgba(255, 143, 90, 0.55);
+  background: rgba(255, 143, 90, 0.1);
+}
+.prop-roster-item.empty { opacity: 0.45; }
+.prop-roster-name { font-weight: 800; color: #fff; margin-bottom: 2px; }
+.prop-roster-count { color: var(--ore); font-weight: 700; }
+.prop-roster-status { margin-top: 4px; color: var(--text-muted); line-height: 1.35; }
+.prop-roster-item.ready .prop-roster-status { color: #7dffb3; }
+.prop-roster-item.blocked .prop-roster-status { color: #ffb08a; }
+.prop-rule-hint {
+  font-size: 11px;
+  color: #9bb8d4;
+  line-height: 1.45;
+  margin: 8px 0 4px;
+}
+.prop-pill.used {
+  opacity: 0.65;
+  text-decoration: line-through;
+  border-color: rgba(255,143,90,0.4);
+}
 .prop-pill {
   font-size: 11px;
   padding: 3px 8px;
@@ -660,12 +710,13 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   border-radius: 50%;
   border: 4px solid rgba(61,231,255,0.5);
   background: conic-gradient(
-    #1a4a6e 0 16.66%,
-    #2a3a7a 16.66% 33.33%,
-    #1e5c58 33.33% 50%,
-    #5a3a6e 50% 66.66%,
-    #6a4a20 66.66% 83.33%,
-    #6a2a3a 83.33% 100%
+    #1a4a6e 0 14.286%,
+    #2a3a7a 14.286% 28.572%,
+    #1e5c58 28.572% 42.858%,
+    #5a3a6e 42.858% 57.144%,
+    #6a4a20 57.144% 71.43%,
+    #6a2a3a 71.43% 85.716%,
+    #3a5a2a 85.716% 100%
   );
   position: relative;
   transition: transform 3.2s cubic-bezier(0.15, 0.8, 0.15, 1);

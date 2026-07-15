@@ -53,14 +53,15 @@ window.ZONE_CONTENT = {
       key: 'bluff',
       title: '瞎掰王',
       short: '真假概念投票',
-      blurb: '四人概念纸条，找出有解释的人。',
-      rule: '组内每人一张纸条，上面是晦涩概念；其中只有一张带真实解释。1 分钟准备后，每人依次解释 30 秒；其余三组投票找出「有解释的人」。未找出：该组 +7；找出：其余三组各 +2。',
+      blurb: '线下发卡 · 网页只计时计分',
+      rule: '线下发放概念卡牌：组内每人一张晦涩概念，其中只有一张带真实解释。1 分钟准备后，每人依次解释 30 秒；其余三组投票找出「有解释的人」。未找出：该组 +7；找出：其余三组各 +2。本页不展示词汇，仅提供规则与计时。',
       scoreHint: '未找出该组 +7 · 找出他组各 +2',
       timerSec: 60,
       speakSec: 30,
       accent: '#ffd56a',
-      poolKey: 'bluffPacks',
-      poolLabel: '概念包'
+      poolKey: null,
+      poolLabel: '线下卡牌',
+      offlineCards: true
     }
   ],
   gardens: [

@@ -133,16 +133,8 @@
         <p class="mat-tip">1 分钟内鉴别人工 / AI；成功 +5。</p>`;
     }
     if (act.key === 'bluff') {
-      const cards = shuffle(item.concepts);
-      return `<div class="bluff-grid">${cards.map((c, i) => `
-        <div class="bluff-card">
-          <div class="bluff-idx">纸条 ${i + 1}</div>
-          <div class="bluff-term">${c.term}</div>
-          <details class="mat-answer"><summary>导师查看</summary>
-            <p>${c.real ? `✅ 有解释：${c.explanation}` : '❌ 无真实解释（瞎掰）'}</p>
-          </details>
-        </div>`).join('')}</div>
-        <p class="mat-tip">准备 1 分钟后，点「解释 30 秒」切换单人计时；他组投票。</p>
+      return `<div class="mat-hero" style="font-size:clamp(24px,4vw,40px)">请发放线下概念卡牌</div>
+        <p class="mat-tip">网页不展示词汇。准备 1 分钟后，点「解释 30 秒」切换单人计时；他组投票。</p>
         <div class="mat-extra-btns">
           <button type="button" class="z-btn accent" id="zBtnSpeak">切换：解释 30 秒</button>
         </div>`;
@@ -156,15 +148,24 @@
     currentKey = key;
     stopTimer();
 
-    let drawn;
-    if (keepItem && currentItem) {
-      drawn = currentItem;
-    } else {
-      drawn = draw(act.poolKey);
-      currentItem = drawn;
+    let drawn = { item: null, remain: 0, total: 0 };
+    if (act.poolKey) {
+      if (keepItem && currentItem) {
+        drawn = currentItem;
+      } else {
+        drawn = draw(act.poolKey);
+        currentItem = drawn;
+      }
     }
 
     const stage = $('#presentStage');
+    const nextBtn = act.offlineCards || !act.poolKey
+      ? ''
+      : `<button class="z-btn accent" id="btnNextMat">下一素材（不重复）</button>`;
+    const poolLabel = act.offlineCards
+      ? '线下卡牌 · 不在网页展示词汇'
+      : `${act.poolLabel} · 剩余 ${drawn.remain} / ${drawn.total}`;
+
     stage.innerHTML = `
       <div class="present-top" style="--accent:${act.accent}">
         <button class="z-btn" id="btnBackHub">← 返回总览</button>
@@ -172,7 +173,7 @@
           <div class="present-kicker">${act.short}</div>
           <h2>${act.title}</h2>
         </div>
-        <button class="z-btn accent" id="btnNextMat">下一素材（不重复）</button>
+        ${nextBtn}
       </div>
 
       <div class="present-rule">
@@ -182,7 +183,7 @@
       </div>
 
       <div class="present-material">
-        <div class="mat-pool-label">${act.poolLabel} · 剩余 ${drawn.remain} / ${drawn.total}</div>
+        <div class="mat-pool-label">${poolLabel}</div>
         ${materialHtml(act, drawn)}
       </div>
 

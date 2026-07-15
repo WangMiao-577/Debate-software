@@ -14,17 +14,17 @@ window.MELT_CITY = {
     stun: '冻结力场',
     remoteDice: '量子骰子',
     extraMove: '再动推进',
-    jump: '跃迁舱',
-    burst: '暴矿脉冲'
+    jump: '跃迁舱'
   },
   scoreCap: 50,
   wheelItems: [
-    { key: 'barrier', label: '路障磁环' },
-    { key: 'stun', label: '冻结力场' },
-    { key: 'remoteDice', label: '量子骰子' },
-    { key: 'extraMove', label: '再动推进' },
-    { key: 'jump', label: '跃迁舱' },
-    { key: 'burst', label: '暴矿脉冲 +3' }
+    { key: 'barrier', label: '路障磁环', kind: 'prop' },
+    { key: 'stun', label: '冻结力场', kind: 'prop' },
+    { key: 'remoteDice', label: '量子骰子', kind: 'prop' },
+    { key: 'extraMove', label: '再动推进', kind: 'prop' },
+    { key: 'jump', label: '跃迁舱', kind: 'prop' },
+    { key: 'bluff', label: '瞎掰王', kind: 'activity' },
+    { key: 'refute', label: '驳论闪电战', kind: 'activity' }
   ],
   /** 素材池：各活动独立洗牌，用尽后再洗，保证不重复展示 */
   gardens: [
@@ -143,11 +143,12 @@ window.MELT_CITY = {
     bluff: {
       title: '瞎掰王',
       short: '真假概念',
-      desc: '组内每人拿到一张纸条，上面是一个晦涩概念；其中只有一张带真实解释。1 分钟准备后，每人依次解释 30 秒；其余三组投票找出「有解释的人」。未找出：该组 +7；找出：其余三组各 +2。',
+      desc: '线下发放概念卡牌：组内每人一张晦涩概念，其中只有一张带真实解释。1 分钟准备后，每人依次解释 30 秒；其余三组投票找出「有解释的人」。未找出：该组 +7；找出：其余三组各 +2。网页仅提供规则与计时，不展示词汇。',
       scoreHint: '未找出该组 +7 · 找出他组各 +2',
       timerSec: 60,
       speakSec: 30,
-      poolKey: 'bluffPacks'
+      poolKey: null,
+      offlineCards: true
     }
   },
   // Classic Monopoly perimeter on 11x11 grid: bottom-left start, clockwise

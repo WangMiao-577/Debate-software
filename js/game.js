@@ -177,13 +177,17 @@
     box.innerHTML = DATA.teams.map((t, i) => {
       const props = Object.entries(t.props)
         .filter(([, n]) => n > 0)
-        .map(([k, n]) => `<span class="prop-pill">${DATA.propNames[k] || k} ×${n}</span>`)
+        .map(([k, n]) => {
+          const blocked = k === 'remoteDice' && t.remoteDiceUsed;
+          return `<span class="prop-pill ${blocked ? 'used' : ''}">${DATA.propNames[k] || k} ×${n}${blocked ? '（已用）' : ''}</span>`;
+        })
         .join('') || '<span class="prop-pill">暂无道具</span>';
+      const diceNote = t.remoteDiceUsed ? '<span class="prop-pill used">量子骰子已用完</span>' : '';
       return `<div class="team-card ${i === state.turn ? 'active' : ''}" style="color:${t.color}" data-team="${i}">
         <div class="name"><span>${t.id} · ${t.name}</span><span>${i === state.turn ? '行动中' : ''}</span></div>
         <div class="ore">${t.ore}<span style="font-size:12px;margin-left:6px;color:#9bb8d4">/ ${DATA.scoreCap || 50}</span></div>
         <div class="meta">位置：${DATA.cells[t.pos].name}（#${t.pos}）${t.skip ? ' · 冻结中' : ''}</div>
-        <div class="props">${props}</div>
+        <div class="props">${props}${diceNote}</div>
       </div>`;
     }).join('');
 
@@ -259,21 +263,84 @@
       '<div class="line">系统就绪。调频者可开始争夺矿脉。</div>';
   }
 
+  function propUsable(t, key) {
+    const n = t.props[key] || 0;
+    if (n <= 0) return { ok: false, reason: '数量为 0' };
+    if (key === 'remoteDice' && t.remoteDiceUsed) {
+      return { ok: false, reason: '本局已使用过（仅限 1 次）' };
+    }
+    if (key === 'barrier' && state.barriers.size > 0) {
+      return { ok: false, reason: '场上已有路障，不能同时放两个' };
+    }
+    return { ok: true, reason: '' };
+  }
+
+  function grantProp(teamIndex, key, amount = 1) {
+    const t = DATA.teams[teamIndex];
+    if (key === 'remoteDice') {
+      if (t.remoteDiceUsed) {
+        toast(`${t.name} 本局量子骰子已用过，无法再获得`);
+        log(`${t.name} 本局量子骰子已使用，跳过再获得`);
+        return false;
+      }
+      // 最多持有 1 枚（整局仅能使用一次）
+      const before = t.props.remoteDice || 0;
+      t.props.remoteDice = Math.min(1, before + amount);
+      if (before >= 1) {
+        toast('量子骰子已持有，整局仅能使用一次');
+        return false;
+      }
+      return true;
+    }
+    t.props[key] = (t.props[key] || 0) + amount;
+    return true;
+  }
+
   function renderPropsPanel() {
     const t = team();
-    els.propSelect.innerHTML = Object.entries(t.props)
-      .filter(([, n]) => n > 0)
-      .map(([k, n]) => `<option value="${k}">${DATA.propNames[k]} ×${n}</option>`)
-      .join('') || '<option value="">暂无可用道具</option>';
+    const order = ['barrier', 'stun', 'remoteDice', 'extraMove', 'jump'];
+    const roster = $('#activePropRoster');
+    if (roster) {
+      const barrierOn = state.barriers.size > 0
+        ? `场上路障：#${[...state.barriers][0]}`
+        : '场上暂无路障';
+      roster.innerHTML = `
+        <div class="prop-roster-head">
+          <span class="prop-roster-team" style="color:${t.color}">${t.id} · ${t.name}</span>
+          <span class="prop-roster-note">${barrierOn}</span>
+        </div>
+        <div class="prop-roster-grid">
+          ${order.map(key => {
+            const n = t.props[key] || 0;
+            const u = propUsable(t, key);
+            const usedNote = key === 'remoteDice' && t.remoteDiceUsed ? '已用完' : '';
+            return `<div class="prop-roster-item ${n > 0 && u.ok ? 'ready' : ''} ${n > 0 && !u.ok ? 'blocked' : ''} ${n <= 0 ? 'empty' : ''}">
+              <div class="prop-roster-name">${DATA.propNames[key]}</div>
+              <div class="prop-roster-count">×${n}${usedNote ? ` · ${usedNote}` : ''}</div>
+              <div class="prop-roster-status">${n <= 0 ? '未持有' : (u.ok ? '可使用' : u.reason)}</div>
+            </div>`;
+          }).join('')}
+        </div>`;
+    }
+
+    const usableKeys = order.filter(k => propUsable(t, k).ok);
+    els.propSelect.innerHTML = usableKeys
+      .map(k => `<option value="${k}">${DATA.propNames[k]} ×${t.props[k]}</option>`)
+      .join('') || '<option value="">当前无可用道具</option>';
 
     els.targetSelect.innerHTML = DATA.teams
       .map((x, i) => `<option value="${i}" ${i === state.turn ? 'disabled' : ''}>${x.name}</option>`)
       .join('');
 
     els.barrierSelect.innerHTML = DATA.cells
-      .filter(c => c.id !== 0)
+      .filter(c => c.id !== 0 && !state.barriers.has(c.id))
       .map(c => `<option value="${c.id}">#${c.id} ${c.name}</option>`)
-      .join('');
+      .join('') || '<option value="">场上已有路障，暂不可放置</option>';
+
+    const hint = $('#propRuleHint');
+    if (hint) {
+      hint.textContent = '规则：量子骰子整局仅可用 1 次；路障磁环场上同时最多 1 个（被踩到消除后可再放）。';
+    }
   }
 
   function renderAll() {
@@ -383,7 +450,7 @@
     if (DATA.activities[c.type]) return DATA.activities[c.type].desc;
     if (c.type === 'start') return '熔城炉心起点。经过或停留可继续前进，无额外奖惩。';
     if (c.type === 'portal') return '跃迁门：立即传送到另一扇跃迁门。';
-    if (c.type === 'wheel') return '能量转盘：抽取一件本局道具（或暴矿脉冲）。';
+    if (c.type === 'wheel') return '能量转盘：随机获得道具，或触发瞎掰王 / 驳论闪电战。';
     if (c.type === 'reroll') return '再投一次：立即额外投掷一次骰子。';
     if (c.type === 'item') return `获得道具【${DATA.propNames[c.item]}】×1。`;
     return '特殊事件格。';
@@ -435,6 +502,7 @@
     const remainHint = drawn
       ? `<p class="deck-hint">素材池剩余 ${drawn.remain} / ${drawn.total}（打乱不重复，用尽后自动重洗）</p>`
       : '';
+    // bluff: no on-screen vocabulary; cards distributed offline
 
     let material = '';
     let awards = [{ n: 1, label: '+1' }, { n: 2, label: '+2' }];
@@ -472,20 +540,10 @@
       </div>`;
       awards = [{ n: 5, label: '+5 成功' }];
     } else if (type === 'bluff') {
-      const pack = drawn.item;
-      const cards = shuffleInPlace(pack.concepts.map(c => ({ ...c })));
       material = `<div class="act-material">
-        <div class="act-material-label">本轮概念包（发给组员 · 仅导师可看解释）</div>
-        <div class="bluff-grid">${cards.map((c, i) => `
-          <div class="bluff-card">
-            <div class="bluff-idx">纸条 ${i + 1}</div>
-            <div class="bluff-term">${c.term}</div>
-            <details class="act-answer">
-              <summary>导师查看</summary>
-              <p>${c.real ? `✅ 有解释：${c.explanation}` : '❌ 无真实解释（瞎掰）'}</p>
-            </details>
-          </div>`).join('')}</div>
-        <p class="act-material-tip">先用下方「准备 1 分钟」计时；解释环节每人 30 秒，可用重置后改口播计时。</p>
+        <div class="act-material-label">线下环节</div>
+        <div class="act-material-hero" style="font-size:clamp(22px,3.5vw,32px)">请发放线下概念卡牌</div>
+        <p class="act-material-tip">网页不展示词汇。先用下方「准备 1 分钟」计时；解释环节每人 30 秒，可重置后口播切换。</p>
       </div>`;
       awards = [
         { n: 7, label: '+7 未找出' },
@@ -505,9 +563,9 @@
           <p class="act-score-hint">计分：${act.scoreHint} · 单队上限 ${DATA.scoreCap || 50}</p>
         </div>
         ${material}
-        ${remainHint}
+        ${type === 'bluff' ? '' : remainHint}
         ${timerBlock}
-        <p class="hint" style="margin-top:10px;color:#9bb8d4">大屏演示页：zones.html（快捷键 Z）。素材已打乱，点「下一素材」可在演示页继续抽取。</p>
+        <p class="hint" style="margin-top:10px;color:#9bb8d4">大屏演示页：zones.html（快捷键 Z）。${type === 'bluff' ? '瞎掰王请使用线下卡牌。' : '素材已打乱，可在演示页继续抽取。'}</p>
       </div>`;
 
     return { html, awards, timerSec: act.timerSec || 0 };
@@ -561,12 +619,14 @@
     }
 
     if (c.type === 'item') {
-      t.props[c.item] = (t.props[c.item] || 0) + 1;
-      log(`${t.name} 获得道具 ${DATA.propNames[c.item]}`);
+      const got = grantProp(state.turn, c.item, 1);
+      if (got) log(`${t.name} 获得道具 ${DATA.propNames[c.item]}`);
       openEvent({
-        title: `获得 ${DATA.propNames[c.item]}`,
+        title: got ? `获得 ${DATA.propNames[c.item]}` : `未获得 ${DATA.propNames[c.item]}`,
         badge: '道具',
-        html: `<div class="event-desc">已放入背包。可在右侧“道具操作”中使用。</div>`,
+        html: `<div class="event-desc">${got
+          ? '已放入背包。可在右侧查看当前行动组可用道具。'
+          : '受道具规则限制（如量子骰子整局仅一次），本次未入包。'}</div>`,
         actions: [{ label: '继续', className: 'btn accent', onClick: () => { closeModal('eventModal'); nextTurn(); } }]
       });
       renderAll();
@@ -577,7 +637,7 @@
       openEvent({
         title: '能量转盘',
         badge: '抽取',
-        html: `<div class="event-desc">转动能量转盘，随机获得本局道具或暴矿脉冲。</div>
+        html: `<div class="event-desc">转动能量转盘：随机获得本局道具，或触发<strong>瞎掰王</strong> / <strong>驳论闪电战</strong>。</div>
           <div class="wheel-box"><div class="wheel-pointer"></div><div class="wheel" id="wheelDisk"></div></div>`,
         actions: [{
           label: '启动转盘', className: 'btn accent', onClick: () => spinWheel()
@@ -587,43 +647,54 @@
     }
 
     // activity cells
-    const act = DATA.activities[c.type];
-    if (act) {
-      const built = buildActivityContent(c.type);
-      openEvent({
-        title: act.title,
-        badge: '表达挑战',
-        html: built.html,
-        actions: awardButtons(built.awards, c.type)
-      });
-      if (built.timerSec) startTimer(built.timerSec);
+    if (DATA.activities[c.type]) {
+      openActivityChallenge(c.type);
       return;
     }
 
     nextTurn();
   }
 
+  function openActivityChallenge(type, { fromWheel = false } = {}) {
+    const act = DATA.activities[type];
+    if (!act) return;
+    const built = buildActivityContent(type);
+    openEvent({
+      title: fromWheel ? `转盘触发 · ${act.title}` : act.title,
+      badge: fromWheel ? '转盘挑战' : '表达挑战',
+      html: built.html,
+      actions: awardButtons(built.awards, type)
+    });
+    if (built.timerSec) startTimer(built.timerSec);
+  }
+
   function spinWheel() {
     const disk = $('#wheelDisk');
     if (!disk) return;
-    const idx = Math.floor(Math.random() * DATA.wheelItems.length);
+    const n = DATA.wheelItems.length;
+    const seg = 360 / n;
+    const idx = Math.floor(Math.random() * n);
     const item = DATA.wheelItems[idx];
-    const rot = 360 * 5 + (360 - idx * 60 - 30);
+    const rot = 360 * 5 + (360 - idx * seg - seg / 2);
     disk.style.transform = `rotate(${rot}deg)`;
     setTimeout(() => {
       const t = team();
-      if (item.key === 'burst') {
-        addOre(state.turn, 3, '暴矿脉冲');
-      } else {
-        t.props[item.key] = (t.props[item.key] || 0) + 1;
+      if (item.kind === 'activity') {
+        log(`${t.name} 转盘触发「${item.label}」`);
+        toast(`转盘 → ${item.label}`);
+        openActivityChallenge(item.key, { fromWheel: true });
+        return;
+      }
+      const got = grantProp(state.turn, item.key, 1);
+      if (got) {
         log(`${t.name} 转盘获得 ${item.label}`);
         toast(`获得 ${item.label}`);
-        renderAll();
       }
+      renderAll();
       openEvent({
         title: `转盘结果：${item.label}`,
         badge: '完成',
-        html: `<div class="event-desc">奖励已结算。</div>`,
+        html: `<div class="event-desc">道具奖励已结算。</div>`,
         actions: [{ label: '结束回合', className: 'btn accent', onClick: () => { closeModal('eventModal'); nextTurn(); } }]
       });
     }, 3300);
@@ -633,15 +704,20 @@
     const key = els.propSelect.value;
     if (!key) return toast('没有可使用的道具');
     const t = team();
-    if (!t.props[key]) return toast('道具不足');
+    const usable = propUsable(t, key);
+    if (!usable.ok) return toast(usable.reason || '当前不可使用');
 
     if (key === 'barrier') {
+      if (state.barriers.size > 0) {
+        return toast('场上已有路障磁环，不能同时放置两个');
+      }
       const cellId = +els.barrierSelect.value;
+      if (!cellId && cellId !== 0) return toast('请选择路障目标格');
       if (cellId === 0) return toast('不可在起点放置');
       state.barriers.add(cellId);
       t.props.barrier -= 1;
-      log(`${t.name} 在 #${cellId} 放置路障磁环`);
-      toast('路障已部署');
+      log(`${t.name} 在 #${cellId} 放置路障磁环（场上同时仅 1 个）`);
+      toast('路障已部署（场上仅保留这一个）');
       renderAll();
       return;
     }
@@ -658,10 +734,11 @@
     }
 
     if (key === 'remoteDice') {
+      if (t.remoteDiceUsed) return toast('量子骰子整局只能使用一次');
       openEvent({
         title: '量子骰子',
-        badge: '遥控',
-        html: `<div class="event-desc">指定任意点数前进。</div>
+        badge: '遥控 · 整局仅 1 次',
+        html: `<div class="event-desc">指定任意点数前进。<strong>使用后本局不可再次使用。</strong></div>
           <div class="btn-row" id="quantumRow"></div>`,
         actions: [{ label: '取消', className: 'btn', onClick: () => closeModal('eventModal') }]
       });
@@ -671,9 +748,10 @@
         b.className = 'btn accent';
         b.textContent = String(n);
         b.onclick = async () => {
-          t.props.remoteDice -= 1;
+          t.props.remoteDice = 0;
+          t.remoteDiceUsed = true;
           closeModal('eventModal');
-          log(`${t.name} 使用量子骰子，指定 ${n} 点`);
+          log(`${t.name} 使用量子骰子（本局仅此一次），指定 ${n} 点`);
           renderAll();
           await rollDice(n);
         };
@@ -715,18 +793,17 @@
       <p class="hint">本局货币：能量矿石（对应上届“仙桃”）。</p>`,
       cells: `<ul>
         <li><strong>表达挑战格（新规则）</strong>：逛三园（小活动·30秒接龙）、飞花令、诗词大赛、驳论闪电战、AI鉴识、瞎掰王。</li>
-        <li><strong>能量转盘</strong>：随机发放路障/冻结/量子骰子/再动/跃迁舱/暴矿脉冲。</li>
+        <li><strong>能量转盘</strong>：随机发放路障/冻结/量子骰子/再动/跃迁舱，或触发瞎掰王 / 驳论闪电战。</li>
         <li><strong>跃迁门</strong>：传送至其他跃迁门。</li>
         <li><strong>再投一次</strong>：立即额外投掷。</li>
         <li><strong>道具格</strong>：直接获得对应道具。</li>
       </ul>`,
       props: `<ul>
-        <li><strong>路障磁环</strong>：在指定格子设障，对手踩到前一格停下并消除路障。初始 1。</li>
+        <li><strong>路障磁环</strong>：在指定格子设障，对手踩到前一格停下并消除路障。初始 1。<strong>场上同时最多 1 个</strong>。</li>
         <li><strong>冻结力场</strong>：令一条轨道上的对手停留 1 回合。</li>
-        <li><strong>量子骰子</strong>：指定 1~6 点前进。初始 1。</li>
+        <li><strong>量子骰子</strong>：指定 1~6 点前进。初始 1。<strong>每队整局仅能使用 1 次</strong>。</li>
         <li><strong>再动推进</strong>：再投一次骰子。</li>
         <li><strong>跃迁舱</strong>：直接前往跃迁门（原“筋斗云”设定）。</li>
-        <li><strong>暴矿脉冲</strong>：立即 +3 能量矿石。</li>
       </ul>`,
       score: `<ul>
         <li>逛三园：有效外延 <strong>+1</strong> / 个（30 秒）。</li>
@@ -734,7 +811,7 @@
         <li>驳论闪电战：按完成度线性给分 <strong>+1～+8</strong>（步长 1）。</li>
         <li>AI鉴识：鉴别成功 <strong>+5</strong>。</li>
         <li>瞎掰王：未找出有解释者该组 <strong>+7</strong>；找出则其余三组各 <strong>+2</strong>。</li>
-        <li>暴矿脉冲 +3。单队上限 <strong>50</strong>。活动素材打乱不重复展示。</li>
+        <li>单队上限 <strong>50</strong>。活动素材打乱不重复展示；瞎掰王线下发卡。</li>
       </ul>
       <p class="hint">建议课堂投屏后，由助教专职操作计分弹窗。</p>`
     };
