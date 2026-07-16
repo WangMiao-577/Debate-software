@@ -80,13 +80,18 @@
             <div class="control-card prop-panel-card">
               <h4>当前行动 · 可用道具</h4>
               <div id="activePropRoster" class="prop-roster"></div>
+              <p class="prop-spent" id="propSpentNote" hidden></p>
               <p class="prop-rule-hint" id="propRuleHint"></p>
               <label style="font-size:12px;color:#9bb8d4;margin-top:8px;display:block">选择要使用的道具</label>
               <select class="select" id="propSelect"></select>
-              <label style="font-size:12px;color:#9bb8d4">路障目标格</label>
-              <select class="select" id="barrierSelect"></select>
-              <label style="font-size:12px;color:#9bb8d4">冻结目标队伍</label>
-              <select class="select" id="targetSelect"></select>
+              <div class="prop-field" id="propFieldBarrier" hidden>
+                <label style="font-size:12px;color:#9bb8d4">路障目标格</label>
+                <select class="select" id="barrierSelect"></select>
+              </div>
+              <div class="prop-field" id="propFieldStun" hidden>
+                <label style="font-size:12px;color:#9bb8d4">冻结目标队伍</label>
+                <select class="select" id="targetSelect"></select>
+              </div>
               <div class="btn-row">
                 <button class="btn warn" id="btnUseProp">使用道具</button>
               </div>
@@ -136,8 +141,8 @@
           <button class="btn ore" data-award="7" data-reason="驳论+7">+7 驳论</button>
           <button class="btn ore" data-award="8" data-reason="驳论+8">+8 驳论</button>
           <button class="btn ore" data-award="5" data-reason="AI鉴识成功">+5 AI鉴识</button>
-          <button class="btn ore" data-award="7" data-reason="瞎掰王未找出">+7 瞎掰王</button>
-          <button class="btn ore" data-award="2" data-reason="瞎掰王他组">+2 瞎掰他组</button>
+          <button class="btn ore" data-award="7" data-reason="瞎掰王未找出">+7 瞎掰王未找出</button>
+          <button class="btn ore" data-award="2" data-award-mode="others" data-reason="瞎掰王其余三组各+2">其余三组各 +2</button>
           <button class="btn" data-award="-1" data-reason="秩序扣减">-1 秩序扣减</button>
         </div>
       </div>

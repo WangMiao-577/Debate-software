@@ -176,13 +176,10 @@
     const box = els.teamList;
     box.innerHTML = DATA.teams.map((t, i) => {
       const props = Object.entries(t.props)
-        .filter(([, n]) => n > 0)
-        .map(([k, n]) => {
-          const blocked = k === 'remoteDice' && t.remoteDiceUsed;
-          return `<span class="prop-pill ${blocked ? 'used' : ''}">${DATA.propNames[k] || k} ×${n}${blocked ? '（已用）' : ''}</span>`;
-        })
+        .filter(([k, n]) => n > 0 && !(k === 'remoteDice' && t.remoteDiceUsed))
+        .map(([k, n]) => `<span class="prop-pill">${DATA.propNames[k] || k} ×${n}</span>`)
         .join('') || '<span class="prop-pill">暂无道具</span>';
-      const diceNote = t.remoteDiceUsed ? '<span class="prop-pill used">量子骰子已用完</span>' : '';
+      const diceNote = t.remoteDiceUsed ? '<span class="prop-pill used">量子骰子已失效</span>' : '';
       return `<div class="team-card ${i === state.turn ? 'active' : ''}" style="color:${t.color}" data-team="${i}">
         <div class="name"><span>${t.id} · ${t.name}</span><span>${i === state.turn ? '行动中' : ''}</span></div>
         <div class="ore">${t.ore}<span style="font-size:12px;margin-left:6px;color:#9bb8d4">/ ${DATA.scoreCap || 50}</span></div>
@@ -278,52 +275,86 @@
   function grantProp(teamIndex, key, amount = 1) {
     const t = DATA.teams[teamIndex];
     if (key === 'remoteDice') {
-      if (t.remoteDiceUsed) {
-        toast(`${t.name} 本局量子骰子已用过，无法再获得`);
-        log(`${t.name} 本局量子骰子已使用，跳过再获得`);
-        return false;
+      // 踩道具格 / 转盘抽到：可覆盖「已失效」，重新获得并再使用一次
+      if (t.remoteDiceUsed || (t.props.remoteDice || 0) <= 0) {
+        const refreshed = !!t.remoteDiceUsed;
+        t.remoteDiceUsed = false;
+        t.props.remoteDice = 1;
+        if (refreshed) {
+          toast(`${t.name} 获得新的量子骰子（已覆盖失效）`);
+          log(`${t.name} 获得量子骰子，覆盖已失效状态`);
+        }
+        return true;
       }
-      // 最多持有 1 枚（整局仅能使用一次）
-      const before = t.props.remoteDice || 0;
-      t.props.remoteDice = Math.min(1, before + amount);
-      if (before >= 1) {
-        toast('量子骰子已持有，整局仅能使用一次');
-        return false;
-      }
-      return true;
+      // 已持有未使用的一枚，不再堆叠
+      toast('量子骰子已持有（持有期间仍只能使用一次）');
+      return false;
     }
     t.props[key] = (t.props[key] || 0) + amount;
     return true;
   }
 
+  function updatePropFields() {
+    const key = els.propSelect?.value || '';
+    const fieldBarrier = $('#propFieldBarrier');
+    const fieldStun = $('#propFieldStun');
+    if (fieldBarrier) fieldBarrier.hidden = key !== 'barrier';
+    if (fieldStun) fieldStun.hidden = key !== 'stun';
+  }
+
   function renderPropsPanel() {
     const t = team();
     const order = ['barrier', 'stun', 'remoteDice', 'extraMove', 'jump'];
+    // 仅展示仍持有、且未整局失效的道具；用尽/失效的不出现在列表
+    const heldKeys = order.filter(key => {
+      if (key === 'remoteDice' && t.remoteDiceUsed) return false;
+      return (t.props[key] || 0) > 0;
+    });
+
     const roster = $('#activePropRoster');
     if (roster) {
       const barrierOn = state.barriers.size > 0
         ? `场上路障：#${[...state.barriers][0]}`
         : '场上暂无路障';
-      roster.innerHTML = `
-        <div class="prop-roster-head">
-          <span class="prop-roster-team" style="color:${t.color}">${t.id} · ${t.name}</span>
-          <span class="prop-roster-note">${barrierOn}</span>
-        </div>
-        <div class="prop-roster-grid">
-          ${order.map(key => {
-            const n = t.props[key] || 0;
-            const u = propUsable(t, key);
-            const usedNote = key === 'remoteDice' && t.remoteDiceUsed ? '已用完' : '';
-            return `<div class="prop-roster-item ${n > 0 && u.ok ? 'ready' : ''} ${n > 0 && !u.ok ? 'blocked' : ''} ${n <= 0 ? 'empty' : ''}">
-              <div class="prop-roster-name">${DATA.propNames[key]}</div>
-              <div class="prop-roster-count">×${n}${usedNote ? ` · ${usedNote}` : ''}</div>
-              <div class="prop-roster-status">${n <= 0 ? '未持有' : (u.ok ? '可使用' : u.reason)}</div>
-            </div>`;
-          }).join('')}
-        </div>`;
+      if (!heldKeys.length) {
+        roster.innerHTML = `
+          <div class="prop-roster-head">
+            <span class="prop-roster-team" style="color:${t.color}">${t.id} · ${t.name}</span>
+            <span class="prop-roster-note">${barrierOn}</span>
+          </div>
+          <p class="prop-roster-empty">当前没有可展示的持有道具</p>`;
+      } else {
+        roster.innerHTML = `
+          <div class="prop-roster-head">
+            <span class="prop-roster-team" style="color:${t.color}">${t.id} · ${t.name}</span>
+            <span class="prop-roster-note">${barrierOn}</span>
+          </div>
+          <div class="prop-roster-grid">
+            ${heldKeys.map(key => {
+              const n = t.props[key] || 0;
+              const u = propUsable(t, key);
+              return `<div class="prop-roster-item ${u.ok ? 'ready' : 'blocked'}">
+                <div class="prop-roster-name">${DATA.propNames[key]}</div>
+                <div class="prop-roster-count">×${n}</div>
+                <div class="prop-roster-status">${u.ok ? '可使用' : u.reason}</div>
+              </div>`;
+            }).join('')}
+          </div>`;
+      }
     }
 
-    const usableKeys = order.filter(k => propUsable(t, k).ok);
+    const spent = $('#propSpentNote');
+    if (spent) {
+      if (t.remoteDiceUsed) {
+        spent.hidden = false;
+        spent.textContent = '已失效：量子骰子（已移出列表；再踩道具格/转盘抽到可覆盖重新获得）';
+      } else {
+        spent.hidden = true;
+        spent.textContent = '';
+      }
+    }
+
+    const usableKeys = heldKeys.filter(k => propUsable(t, k).ok);
     els.propSelect.innerHTML = usableKeys
       .map(k => `<option value="${k}">${DATA.propNames[k]} ×${t.props[k]}</option>`)
       .join('') || '<option value="">当前无可用道具</option>';
@@ -339,8 +370,9 @@
 
     const hint = $('#propRuleHint');
     if (hint) {
-      hint.textContent = '规则：量子骰子整局仅可用 1 次；路障磁环场上同时最多 1 个（被踩到消除后可再放）。';
+      hint.textContent = '量子骰子用过后失效；若再踩到道具格或转盘抽到，可覆盖失效重新获得。路障场上同时最多 1 个。';
     }
+    updatePropFields();
   }
 
   function renderAll() {
@@ -471,21 +503,37 @@
     openModal('eventModal');
   }
 
+  function awardOthers(amount, reason) {
+    DATA.teams.forEach((_, i) => {
+      if (i === state.turn) return;
+      addOre(i, amount, reason);
+    });
+  }
+
   function awardButtons(presets, activityKey) {
     const list = (presets || [
       { n: 1, label: '+1' },
       { n: 2, label: '+2' },
       { n: 5, label: '+5' }
-    ]).map(p => ({
-      label: typeof p === 'number' ? `+${p} 矿石` : `${p.label} 矿石`,
-      className: 'btn ore',
-      onClick: () => {
-        const n = typeof p === 'number' ? p : p.n;
-        addOre(state.turn, n, '挑战奖励');
-        closeModal('eventModal');
-        nextTurn();
-      }
-    }));
+    ]).map(p => {
+      const mode = typeof p === 'object' ? p.mode : null;
+      const n = typeof p === 'number' ? p : p.n;
+      const label = typeof p === 'number' ? `+${p} 矿石` : `${p.label}`;
+      return {
+        label: label.includes('矿石') ? label : `${label}`,
+        className: 'btn ore',
+        onClick: () => {
+          if (mode === 'others') {
+            awardOthers(n, '瞎掰王·其余三组各+2');
+            toast(`其余三组各 +${n}`);
+          } else {
+            addOre(state.turn, n, '挑战奖励');
+          }
+          closeModal('eventModal');
+          nextTurn();
+        }
+      };
+    });
     const demoUrl = activityKey ? `zones.html?a=${encodeURIComponent(activityKey)}` : 'zones.html';
     list.push(
       { label: '打开活动演示页', className: 'btn', onClick: () => { window.open(demoUrl, '_blank'); } },
@@ -543,11 +591,11 @@
       material = `<div class="act-material">
         <div class="act-material-label">线下环节</div>
         <div class="act-material-hero" style="font-size:clamp(22px,3.5vw,32px)">请发放线下概念卡牌</div>
-        <p class="act-material-tip">网页不展示词汇。先用下方「准备 1 分钟」计时；解释环节每人 30 秒，可重置后口播切换。</p>
+        <p class="act-material-tip">未找出有解释者：行动组 +7。找出：其余三组各自 +2（行动组不加）。</p>
       </div>`;
       awards = [
-        { n: 7, label: '+7 未找出' },
-        { n: 2, label: '+2 他组（换队）' }
+        { n: 7, label: '+7 未找出（行动组）' },
+        { n: 2, label: '其余三组各 +2', mode: 'others' }
       ];
     }
 
@@ -801,7 +849,7 @@
       props: `<ul>
         <li><strong>路障磁环</strong>：在指定格子设障，对手踩到前一格停下并消除路障。初始 1。<strong>场上同时最多 1 个</strong>。</li>
         <li><strong>冻结力场</strong>：令一条轨道上的对手停留 1 回合。</li>
-        <li><strong>量子骰子</strong>：指定 1~6 点前进。初始 1。<strong>每队整局仅能使用 1 次</strong>。</li>
+        <li><strong>量子骰子</strong>：指定 1~6 点前进。初始 1。使用后失效；再踩到道具格或转盘抽到时可<strong>覆盖失效</strong>重新获得。</li>
         <li><strong>再动推进</strong>：再投一次骰子。</li>
         <li><strong>跃迁舱</strong>：直接前往跃迁门（原“筋斗云”设定）。</li>
       </ul>`,
@@ -859,10 +907,22 @@
     els.awardGrid.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-award]');
       if (!btn) return;
-      const teamIndex = +$('#awardTeam').value;
-      addOre(teamIndex, +btn.dataset.award, btn.dataset.reason || '快捷奖励');
+      const amount = +btn.dataset.award;
+      const reason = btn.dataset.reason || '快捷奖励';
+      if (btn.dataset.awardMode === 'others') {
+        const acting = +$('#awardTeam').value;
+        DATA.teams.forEach((_, i) => {
+          if (i === acting) return;
+          addOre(i, amount, reason);
+        });
+        toast(`其余三组各 +${amount}`);
+      } else {
+        addOre(+$('#awardTeam').value, amount, reason);
+      }
       renderTeams();
     });
+
+    els.propSelect?.addEventListener('change', updatePropFields);
 
     // keyboard for classroom
     let brandClicks = 0;

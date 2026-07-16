@@ -134,7 +134,7 @@
     }
     if (act.key === 'bluff') {
       return `<div class="mat-hero" style="font-size:clamp(24px,4vw,40px)">请发放线下概念卡牌</div>
-        <p class="mat-tip">网页不展示词汇。准备 1 分钟后，点「解释 30 秒」切换单人计时；他组投票。</p>
+        <p class="mat-tip">网页不展示词汇。未找出：行动组 +7；找出：其余三组各自 +2。</p>
         <div class="mat-extra-btns">
           <button type="button" class="z-btn accent" id="zBtnSpeak">切换：解释 30 秒</button>
         </div>`;
